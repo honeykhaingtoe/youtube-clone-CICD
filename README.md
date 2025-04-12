@@ -8,6 +8,7 @@ terraform plan
 terraform apply -auto-approve
 
 ```
+# Install necessary tools in jenkins
 ## Install AWS cli
 ```sh
 curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -32,6 +33,17 @@ cd /tmp
 sudo mv /tmp/eksctl /bin
 eksctl version
 ```
+## Setup jenkins with terraform
+
+```sh
+cd terraform
+terraform init
+terraform plan 
+terraform apply -auto-approve
+```
+## Install necessary tools and configure variable in Jenkins UI
+
+
 ## Setup kubernetes cluster with eksctl
 
 ```sh

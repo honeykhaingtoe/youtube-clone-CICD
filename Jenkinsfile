@@ -27,7 +27,6 @@ pipeline {
         TRIVY_IMAGE_REPORT = 'trivyimage.txt'
         K8S_NAMESPACE = 'default'  
         APP_NAME = 'youtube-clone'
-        k8s-server-url = 'https://8853138AA4A1602BDE0F6780D2F5948B.gr7.ap-southeast-1.eks.amazonaws.com'
     }
     
     stages {
@@ -179,46 +178,41 @@ pipeline {
             steps {
                 script {
                     dir('Kubernetes') {
-                        // Update the image tag in deployment.yml
-                        sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
+                        sh "sed -i.bak 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml && rm deployment.yml.bak"
 
-                        // Use withCredentials to access the server URL and token
                         withCredentials([
                             string(credentialsId: 'k8s-server-url', variable: 'K8S_SERVER_URL'),
-                            string(credentialsId: 'k8s-token', variable: 'K8S_TOKEN')
+                            string(credentialsId: 'jenkins-k8s-token', variable: 'K8S_TOKEN')
                         ]) {
-                            // Create a kubeconfig file dynamically
                             sh """
                             cat > kubeconfig <<EOF
                             apiVersion: v1
                             clusters:
                             - cluster:
                                 server: ${K8S_SERVER_URL}
-                            name: eks-cluster
+                              name: eks-cluster
                             contexts:
                             - context:
                                 cluster: eks-cluster
                                 user: jenkins
                                 namespace: ${K8S_NAMESPACE}
-                            name: eks-context
+                              name: eks-context
                             current-context: eks-context
                             kind: Config
                             preferences: {}
                             users:
                             - name: jenkins
-                            user:
+                              user:
                                 token: ${K8S_TOKEN}
                             EOF
                             """
 
-                            // Set KUBECONFIG environment variable to use the generated kubeconfig
                             withEnv(["KUBECONFIG=${WORKSPACE}/Kubernetes/kubeconfig"]) {
                                 sh "kubectl apply -f deployment.yml -n ${K8S_NAMESPACE}"
                                 sh "kubectl apply -f service.yml -n ${K8S_NAMESPACE}"
                                 sh "kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=5m"
                             }
 
-                            // Clean up the kubeconfig file
                             sh "rm kubeconfig"
                         }
                     }
@@ -230,7 +224,6 @@ pipeline {
                 }
                 failure {
                     echo "Failed to deploy ${APP_NAME} to Kubernetes in namespace ${K8S_NAMESPACE}"
-                    // Recreate the kubeconfig for the rollback command
                     dir('Kubernetes') {
                         withCredentials([
                             string(credentialsId: 'k8s-server-url', variable: 'K8S_SERVER_URL'),
@@ -242,19 +235,19 @@ pipeline {
                             clusters:
                             - cluster:
                                 server: ${K8S_SERVER_URL}
-                            name: eks-cluster
+                              name: eks-cluster
                             contexts:
                             - context:
                                 cluster: eks-cluster
                                 user: jenkins
                                 namespace: ${K8S_NAMESPACE}
-                            name: eks-context
+                              name: eks-context
                             current-context: eks-context
                             kind: Config
                             preferences: {}
                             users:
                             - name: jenkins
-                            user:
+                              user:
                                 token: ${K8S_TOKEN}
                             EOF
                             """
