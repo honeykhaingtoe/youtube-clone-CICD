@@ -182,7 +182,7 @@ pipeline {
 
                         withCredentials([
                             string(credentialsId: 'k8s-server-url', variable: 'K8S_SERVER_URL'),
-                            string(credentialsId: 'jenkins-k8s-token', variable: 'K8S_TOKEN')
+                            string(credentialsId: 'k8s-token', variable: 'K8S_TOKEN')
                         ]) {
                             sh """
                             cat > kubeconfig <<EOF
@@ -227,7 +227,7 @@ pipeline {
                     dir('Kubernetes') {
                         withCredentials([
                             string(credentialsId: 'k8s-server-url', variable: 'K8S_SERVER_URL'),
-                            string(credentialsId: 'jenkins-k8s-token', variable: 'K8S_TOKEN')
+                            string(credentialsId: 'k8s-token', variable: 'K8S_TOKEN')
                         ]) {
                             sh """
                             cat > kubeconfig <<EOF
