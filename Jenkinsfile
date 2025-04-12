@@ -12,7 +12,7 @@ pipeline {
     
     environment {
         SCANNER_HOME = tool 'sonarqube-scanner'
-        TRIVY_HOME = tool 'trivy'
+        TRIVY_HOME = '/usr/bin/trivy'
         REPO_URL = 'https://github.com/hlaingminpaing/youtube-clone-CICD.git'
         REPO_BRANCH = 'main'
         DOCKER_IMAGE_NAME = 'hlaingminpaing/youtube-clone'
