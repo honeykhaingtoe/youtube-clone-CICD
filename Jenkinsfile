@@ -138,7 +138,7 @@ pipeline {
              steps{
                  script{
                      dir('Kubernetes') {
-                         kubeconfig(credentialsId: "${KUBERNETES_CREDENTIALS_ID}", serverUrl: '') {
+                         kubeconfig(credentialsId: 'kubernetes', serverUrl: '') {
                          sh 'kubectl delete --all pods'
                          sh 'kubectl apply -f deployment.yml'
                          sh 'kubectl apply -f service.yml'
