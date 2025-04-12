@@ -25,6 +25,9 @@ pipeline {
         DOCKER_TOOL_NAME = 'docker'
         TRIVY_FS_REPORT = 'trivyfs.txt'
         TRIVY_IMAGE_REPORT = 'trivyimage.txt'
+        K8S_NAMESPACE = 'default'  
+        APP_NAME = 'youtube-clone'
+        K8S_SERVER_URL = 'https://8853138AA4A1602BDE0F6780D2F5948B.gr7.ap-southeast-1.eks.amazonaws.com'
     }
     
     stages {
@@ -132,18 +135,72 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernets'){
-             steps{
-                 script{
-                     dir('Kubernetes') {
-                         kubeconfig(credentialsId: "${KUBERNETES_CREDENTIALS_ID}", serverUrl: '') {
-                         sh 'kubectl delete --all pods'
-                         sh 'kubectl apply -f deployment.yml'
-                         sh 'kubectl apply -f service.yml'
-                         }   
-                     }
-                 }
-             }
-         }
+        // stage('Deploy to Kubernets'){
+        //      steps{
+        //          script{
+        //              dir('Kubernetes') {
+        //                  kubeconfig(credentialsId: "${KUBERNETES_CREDENTIALS_ID}", serverUrl: '') {
+        //                  sh 'kubectl delete --all pods'
+        //                  sh 'kubectl apply -f deployment.yml'
+        //                  sh 'kubectl apply -f service.yml'
+        //                  }   
+        //              }
+        //          }
+        //      }
+        //  }
+
+        // stage('Deploy to Kubernetes') {
+        //     steps {
+        //         script {
+        //             dir('Kubernetes') {
+        //                 // Update the image tag in deployment.yml
+        //                 sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
+
+        //                 withKubeCredentials([
+        //                     [ credentialsId: 'jenkins-k8s-token', serverUrl: 'https://<your-eks-api-server-url>' ]
+        //                 ]) {
+        //                     sh "kubectl apply -f deployment.yml -n ${K8S_NAMESPACE}"
+        //                     sh "kubectl apply -f service.yml -n ${K8S_NAMESPACE}"
+        //                     sh "kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=5m"
+        //                 }
+        //             }
+        //         }
+        //     }
+        //     post {
+        //         success {
+        //             echo "Successfully deployed ${APP_NAME} to Kubernetes in namespace ${K8S_NAMESPACE}"
+        //         }
+        //         failure {
+        //             echo "Failed to deploy ${APP_NAME} to Kubernetes in namespace ${K8S_NAMESPACE}"
+        //             sh "kubectl rollout undo deployment/${APP_NAME} -n ${K8S_NAMESPACE} || true"
+        //         }
+        //     }
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    dir('Kubernetes') {
+                        sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
+
+                        withKubeCredentials([
+                            [ credentialsId: 'jenkins-k8s-token', serverUrl: "${K8S_SERVER_URL}" ]
+                        ]) {
+                            sh "kubectl apply -f deployment.yml -n ${K8S_NAMESPACE}"
+                            sh "kubectl apply -f service.yml -n ${K8S_NAMESPACE}"
+                            sh "kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=5m"
+                        }
+                    }
+                }
+            }
+            post {
+                success {
+                    echo "Successfully deployed ${APP_NAME} to Kubernetes in namespace ${K8S_NAMESPACE}"
+                }
+                failure {
+                    echo "Failed to deploy ${APP_NAME} to Kubernetes in namespace ${K8S_NAMESPACE}"
+                    sh "kubectl rollout undo deployment/${APP_NAME} -n ${K8S_NAMESPACE} || true"
+                }
+            }
+        }
+        }
     }
 }
