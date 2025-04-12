@@ -13,7 +13,7 @@ pipeline {
     environment {
         SCANNER_HOME = tool 'sonarqube-scanner'
         TRIVY_HOME = '/usr/bin'
-        REPO_URL = 'https://github.com/hlaingminpaing/youtube-clone-CICD.git'
+        REPO_URL = 'https://github.com/hlaingminpaing/youtube-clone-CICD.git' 
         REPO_BRANCH = 'main'
         DOCKER_IMAGE_NAME = 'hlaingminpaing/youtube-clone'
         SONAR_PROJECT_NAME = 'youtube-cicd'
@@ -182,7 +182,7 @@ pipeline {
                         sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
 
                         withKubeCredentials([
-                            [ credentialsId: 'jenkins-k8s-token', serverUrl: "${K8S_SERVER_URL}" ]
+                            [ credentialsId: 'k8s-token', serverUrl: "${K8S_SERVER_URL}" ]
                         ]) {
                             sh "kubectl apply -f deployment.yml -n ${K8S_NAMESPACE}"
                             sh "kubectl apply -f service.yml -n ${K8S_NAMESPACE}"
