@@ -1,23 +1,74 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# Node.js dependencies
 /node_modules
 /.pnp
 .pnp.js
 
-# testing
+# Testing
 /coverage
 
-# production
+# Production
 /build
 
-# misc
+# Misc
 .DS_Store
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local Terraform files
+# Terraform state files
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfstate.lock.info
+terraform.tfstate
+terraform.tfstate.backup
+
+# Terraform plan files
+*.tfplan
+*.tfplan.*
+
+# Terraform variables file (uncomment if it contains secrets)
+# terraform.tfvars
+# *.tfvars
+
+# Terraform override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform lock file (uncomment if you don't want to commit it)
+# .terraform.lock.hcl
+
+# Terraform provider and module directories (downloaded during `terraform init`)
+.terraform/
+
+# Terraform crash logs
+crash.log
+crash.*.log
+
+# Local environment files
+.env
+*.env
+
+# Editor-specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Test output or generated files
+*.out
+*.test
