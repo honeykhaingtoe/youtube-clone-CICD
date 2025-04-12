@@ -1,0 +1,90 @@
+pipeline {
+    agent any
+    
+    parameters {
+        string(name: 'MAJOR_VERSION', defaultValue: '1', description: 'Major version for the Docker image tag (e.g., 1 for v1.x)')
+    }
+    
+    tools {
+        jdk 'jdk17'
+        nodejs 'node16'
+    }
+    environment {
+        SCANNER_HOME = tool 'sonarqube-scanner'
+    }
+    
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        stage('Checkout from Git') {
+            steps {
+                git branch: 'main', url: 'https://github.com/hlaingminpaing/youtube-clone-CICD.git'
+            }
+        }
+        stage('Sonarqube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube-Server') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=youtube-cicd \
+                    -Dsonar.projectKey=youtube-cicd '''
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'SonarQube-Token'
+                }
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh "npm install"
+            }
+        }
+        stage('TRIVY FS SCAN') {
+            steps {
+                sh "trivy fs . > trivyfs.txt"
+            }
+        }
+
+        stage('Set Version') {
+            steps {
+                script {
+                    def buildNumber = env.BUILD_NUMBER ?: '0'
+                    env.IMAGE_TAG = "v${params.MAJOR_VERSION}.${buildNumber}"
+                    echo "Docker image will be tagged as: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}"
+                }
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'dockerhub', toolName: 'docker') {
+                        // Build the Docker image
+                        sh "docker build -t youtube-clone ."
+                        // Tag the image with the dynamically fetched version
+                        sh "docker tag youtube-clone hlaingminpaing/youtube-clone:${env.IMAGE_TAG}"
+                        // Push the tagged image
+                        sh "docker push hlaingminpaing/youtube-clone:${env.IMAGE_TAG}"
+                    }
+                }
+            }
+            post {
+                always {
+                    // Clean up Docker images to save disk space
+                    sh "docker rmi youtube-clone hlaingminpaing/youtube-clone:${env.IMAGE_TAG} || true"
+                }
+            }
+        }
+        
+        stage('TRIVY') {
+            steps {
+                sh "trivy image hlaingminpaing/youtube-clone:${env.IMAGE_TAG} > trivyimage.txt"
+            }
+        }
+    }
+}

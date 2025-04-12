@@ -1,0 +1,134 @@
+pipeline {
+    agent any
+    
+    parameters {
+        string(name: 'MAJOR_VERSION', defaultValue: '1', description: 'Major version for the Docker image tag (e.g., 1 for v1.x)')
+    }
+    
+    tools {
+        jdk 'jdk17'
+        nodejs 'node16'
+    }
+    
+    environment {
+        SCANNER_HOME = tool 'sonarqube-scanner'
+        TRIVY_HOME = tool 'trivy'
+        REPO_URL = 'https://github.com/hlaingminpaing/youtube-clone-CICD.git'
+        REPO_BRANCH = 'main'
+        DOCKER_IMAGE_NAME = 'hlaingminpaing/youtube-clone'
+        SONAR_PROJECT_NAME = 'youtube-cicd'
+        SONAR_PROJECT_KEY = 'youtube-cicd'
+        DOCKER_CREDENTIALS_ID = 'dockerhub'
+        SONAR_CREDENTIALS_ID = 'SonarQube-Token'
+        SONAR_SERVER = 'SonarQube-Server'
+        DOCKER_TOOL_NAME = 'docker'
+        TRIVY_FS_REPORT = 'trivyfs.txt'
+        TRIVY_IMAGE_REPORT = 'trivyimage.txt'
+    }
+    
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+            post {
+                always {
+                    echo "Workspace cleaned successfully"
+                }
+            }
+        }
+        stage('Checkout from Git') {
+            steps {
+                git branch: "${REPO_BRANCH}", url: "${REPO_URL}", credentialsId: 'github-credentials'
+            }
+        }
+        stage('Sonarqube Analysis') {
+            steps {
+                withSonarQubeEnv(credentialsId: "${SONAR_CREDENTIALS_ID}", installationName: "${SONAR_SERVER}") {
+                    sh """
+                    ${SCANNER_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectName=${SONAR_PROJECT_NAME} \
+                        -Dsonar.projectKey=${SONAR_PROJECT_KEY}
+                    """
+                }
+            }
+        }
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: "${SONAR_CREDENTIALS_ID}"
+                }
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    def nodeHome = tool name: 'node16', type: 'nodejs'
+                    env.PATH = "${nodeHome}/bin:${env.PATH}"
+                    sh "node --version"
+                    sh "npm --version"
+                    sh "npm install"
+                }
+            }
+            post {
+                failure {
+                    echo "Failed to install dependencies. Check Node.js setup or package.json."
+                }
+            }
+        }
+        stage('TRIVY FS SCAN') {
+            steps {
+                script {
+                    sh "${TRIVY_HOME}/trivy fs . > ${TRIVY_FS_REPORT}"
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: "${TRIVY_FS_REPORT}", allowEmptyArchive: true
+                }
+            }
+        }
+        stage('Set Version') {
+            steps {
+                script {
+                    def buildNumber = env.BUILD_NUMBER ?: '0'
+                    env.IMAGE_TAG = "v${params.MAJOR_VERSION}.${buildNumber}"
+                    echo "Docker image will be tagged as: ${DOCKER_IMAGE_NAME}:${env.IMAGE_TAG}"
+                }
+            }
+        }
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'dockerhub', toolName: 'docker') {
+                        // Build the Docker image
+                        sh "docker build -t youtube-clone ."
+                        // Tag the image with the dynamically fetched version
+                        sh "docker tag youtube-clone hlaingminpaing/youtube-clone:${env.IMAGE_TAG}"
+                        // Push the tagged image
+                        sh "docker push hlaingminpaing/youtube-clone:${env.IMAGE_TAG}"
+                    }
+                }
+            }
+            post {
+                always {
+                    // Clean up Docker images to save disk space
+                    sh "docker rmi youtube-clone hlaingminpaing/youtube-clone:${env.IMAGE_TAG} || true"
+                }
+            }
+        }
+        
+        stage('TRIVY') {
+            steps {
+                script {
+                    sh "${TRIVY_HOME}/trivy image ${DOCKER_IMAGE_NAME}:${env.IMAGE_TAG} > ${TRIVY_IMAGE_REPORT}"
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: "${TRIVY_IMAGE_REPORT}", allowEmptyArchive: true
+                }
+            }
+        }
+    }
+}
