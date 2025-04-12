@@ -178,7 +178,7 @@ pipeline {
             steps {
                 script {
                     dir('Kubernetes') {
-                        sh "sed -i.bak 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml && rm deployment.yml.bak"
+                        sh "sed -i.bak 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
 
                         withCredentials([
                             string(credentialsId: 'k8s-server-url', variable: 'K8S_SERVER_URL'),
