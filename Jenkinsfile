@@ -178,44 +178,13 @@ pipeline {
             steps {
                 script {
                     dir('Kubernetes') {
+                        // Update the image tag in deployment.yml
                         sh "sed -i.bak 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml && rm deployment.yml.bak"
 
-                        withCredentials([
-                            string(credentialsId: 'k8s-server-url', variable: 'K8S_SERVER_URL'),
-                            string(credentialsId: 'k8s-token', variable: 'K8S_TOKEN')
-                        ]) {
-                            sh """
-                            CLEAN_TOKEN=\$(echo "\${K8S_TOKEN}" | tr -d '\n')
-                            cat > kubeconfig <<EOF
-                            apiVersion: v1
-                            clusters:
-                            - cluster:
-                                server: ${K8S_SERVER_URL}
-                              name: eks-cluster
-                            contexts:
-                            - context:
-                                cluster: eks-cluster
-                                user: jenkins
-                                namespace: ${K8S_NAMESPACE}
-                              name: eks-context
-                            current-context: eks-context
-                            kind: Config
-                            preferences: {}
-                            users:
-                            - name: jenkins
-                              user:
-                                token: "\${CLEAN_TOKEN}"
-                            EOF
-                            """
-
-                            withEnv(["KUBECONFIG=${WORKSPACE}/Kubernetes/kubeconfig"]) {
-                                sh "kubectl apply -f deployment.yml -n ${K8S_NAMESPACE}"
-                                sh "kubectl apply -f service.yml -n ${K8S_NAMESPACE}"
-                                sh "kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=5m"
-                            }
-
-                            sh "rm kubeconfig"
-                        }
+                        // Use the default kubeconfig (assumed to be at ~/.kube/config)
+                        sh "kubectl apply -f deployment.yml -n ${K8S_NAMESPACE}"
+                        sh "kubectl apply -f service.yml -n ${K8S_NAMESPACE}"
+                        sh "kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=5m"
                     }
                 }
             }
@@ -226,37 +195,8 @@ pipeline {
                 failure {
                     echo "Failed to deploy ${APP_NAME} to Kubernetes in namespace ${K8S_NAMESPACE}"
                     dir('Kubernetes') {
-                        withCredentials([
-                            string(credentialsId: 'k8s-server-url', variable: 'K8S_SERVER_URL'),
-                            string(credentialsId: 'k8s-token', variable: 'K8S_TOKEN')
-                        ]) {
-                            sh """
-                            cat > kubeconfig <<EOF
-                            apiVersion: v1
-                            clusters:
-                            - cluster:
-                                server: ${K8S_SERVER_URL}
-                              name: eks-cluster
-                            contexts:
-                            - context:
-                                cluster: eks-cluster
-                                user: jenkins
-                                namespace: ${K8S_NAMESPACE}
-                              name: eks-context
-                            current-context: eks-context
-                            kind: Config
-                            preferences: {}
-                            users:
-                            - name: jenkins
-                              user:
-                                token: ${K8S_TOKEN}
-                            EOF
-                            """
-                            withEnv(["KUBECONFIG=${WORKSPACE}/Kubernetes/kubeconfig"]) {
-                                sh "kubectl rollout undo deployment/${APP_NAME} -n ${K8S_NAMESPACE} || true"
-                            }
-                            sh "rm kubeconfig"
-                        }
+                        // Use the default kubeconfig for rollback
+                        sh "kubectl rollout undo deployment/${APP_NAME} -n ${K8S_NAMESPACE} || true"
                     }
                 }
             }
