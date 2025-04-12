@@ -182,8 +182,8 @@ pipeline {
                         sh "sed -i.bak 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml && rm deployment.yml.bak"
 
                         // Use the default kubeconfig (assumed to be at ~/.kube/config)
-                        sh "kubectl apply -f deployment.yml"
-                        sh "kubectl apply -f service.yml"
+                        sh "kubectl apply -f Kubernetes/deployment.yml"
+                        sh "kubectl apply -f Kubernetes/service.yml"
                         // sh "kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=5m"
                     }
                 }
