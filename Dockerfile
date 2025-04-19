@@ -32,11 +32,11 @@ WORKDIR /app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install build dependencies (required for native dependencies, if any)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# # Install build dependencies (required for native dependencies, if any)
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     python3 \
+#     build-essential \
+#     && rm -rf /var/lib/apt/lists/*
 
 # Install app dependencies
 RUN npm install
@@ -47,20 +47,14 @@ COPY . .
 # Build the React app
 RUN npm run build
 
-# Stage 2: Serve the app
-FROM node:16-slim
+# # Install serve to serve the static files
+# RUN npm install -g serve
 
-# Set the working directory
-WORKDIR /app
-
-# Install serve to serve the static files
-RUN npm install -g serve
-
-# Copy the build output from the builder stage
-COPY --from=builder /app/build ./build
+# # Copy the build output from the builder stage
+# COPY --from=builder /app/build ./build
 
 # Expose the port
 EXPOSE 3000
 
 # Serve the app
-CMD ["serve", "-s", "build", "-l", "3000"]
+CMD ["npm", "start"]
