@@ -6,7 +6,7 @@ pipeline {
     }
     
     tools {
-        jdk 'jdk17'
+        jdk 'jdk21'
         nodejs 'node16'
     }
     
@@ -56,13 +56,14 @@ pipeline {
                 }
             }
         }
-        // stage('Quality Gate') {
-        //     steps {
-        //         script {
-        //             waitForQualityGate abortPipeline: false, credentialsId: "${SONAR_CREDENTIALS_ID}"
-        //         }
-        //     }
-        // }
+        stage('Quality Gate') {
+            steps {
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: "${SONAR_CREDENTIALS_ID}"
+                }
+            }
+        }
+        
         stage('Install Dependencies') {
             steps {
                 script {
