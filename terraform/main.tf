@@ -1,15 +1,9 @@
-# Create a new key pair
-resource "aws_key_pair" "jenkins_key" {
-  key_name   = "jenkins-keypair"  # Name of the key pair in AWS
-  public_key = file("~/.ssh/id_rsa.pub")  # Path to your public key
-}
-
 resource "aws_instance" "web" {
-  ami                    = "ami-06c4be2792f419b7b"  # Change AMI ID for different region
+  ami                    = "ami-06c4be2792f419b7b"      #change ami id for different region
   instance_type          = "t2.large"
-  key_name               = aws_key_pair.jenkins_key.key_name  # Reference the created key pair
+  key_name               = "DevOps"              #change key name as per your setup
   vpc_security_group_ids = [aws_security_group.Jenkins-VM-SG.id]
-  # subnet_id            = "subnet-0279333d80ef56ff8"  # Uncomment if needed
+  #subnet_id              = "subnet-0279333d80ef56ff8"
   user_data              = templatefile("./install.sh", {})
 
   tags = {
@@ -24,7 +18,7 @@ resource "aws_instance" "web" {
 resource "aws_security_group" "Jenkins-VM-SG" {
   name        = "Jenkins-VM-SG"
   description = "Allow TLS inbound traffic"
-  vpc_id      = "vpc-0d5b095006ca56d4f"  # Change VPC ID
+  vpc_id      = "vpc-0fdfd829d78db98cd"           ###change vpc id
 
   ingress = [
     for port in [22, 80, 443, 8080, 9000, 3000] : {
