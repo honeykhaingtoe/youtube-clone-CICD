@@ -27,6 +27,9 @@ pipeline {
         TRIVY_IMAGE_REPORT = 'trivyimage.txt'
         K8S_NAMESPACE = 'default'  
         APP_NAME = 'youtube-clone'
+        AWS_ACCESS_KEY_ID = credentials('your-aws-access-key-id-secret')
+        AWS_SECRET_ACCESS_KEY = credentials('your-aws-secret-key-secret')
+        AWS_DEFAULT_REGION = 'ap-southeast-1'
     }
     
     stages {
