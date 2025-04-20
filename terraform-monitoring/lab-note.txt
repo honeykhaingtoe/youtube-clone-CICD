@@ -1,0 +1,172 @@
+Step 1: Configure Prometheus to Scrape Metrics
+Prometheus collects metrics by scraping HTTP endpoints exposed by services. You need to configure Prometheus to scrape metrics from:
+
+EKS Cluster: Kubernetes API, nodes, and pods.
+Pods: Application-specific metrics (if exposed).
+Jenkins: Metrics endpoint provided by Jenkins plugins.
+1.1. Install Prometheus Components in EKS (Optional)
+To monitor the EKS cluster and pods effectively, you can deploy Prometheus components (e.g., kube-state-metrics, node-exporter) inside the EKS cluster. This is optional if you only want to scrape metrics from the monitoring VM.
+
+Add Prometheus Helm Repository:
+
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+Install kube-prometheus-stack: Deploy the kube-prometheus-stack Helm chart to the EKS cluster to collect cluster and pod metrics. Run this from the monitoring VM (ensure kubectl is configured to point to your EKS cluster):
+bash
+
+helm install prometheus prometheus-community/kube-prometheus-stack \
+  --namespace monitoring --create-namespace \
+  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.storageClassName=gp2 \
+  --set prometheus.prometheusSpec.storageSpec.volumeClaimTemplate.spec.resources.requests.storage=10Gi
+
+This deploys Prometheus, Grafana, kube-state-metrics, and node-exporter in the monitoring namespace. The gp2 storage class is used for persistent storage (ensure the EKS cluster has the AWS EBS CSI driver installed; see Step 1.2 below).
+Verify Deployment:
+
+kubectl get pods -n monitoring
+
+You should see pods for prometheus, grafana, kube-state-metrics, and node-exporter.
+1.2. Install AWS EBS CSI Driver (If Needed)
+If you deployed Prometheus in the EKS cluster with persistent storage, ensure the AWS EBS CSI driver is installed:
+
+Create an IAM OIDC provider for the cluster:
+
+eksctl utils associate-iam-oidc-provider --cluster <cluster-name> --approve
+Create an IAM role for the EBS CSI driver:
+
+eksctl create iamserviceaccount \
+  --name ebs-csi-controller-sa \
+  --namespace kube-system \
+  --cluster <cluster-name> \
+  --role-name AmazonEKS_EBS_CSI_DriverRole \
+  --role-only \
+  --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
+  --approve
+Install the EBS CSI driver:
+
+eksctl create addon --name aws-ebs-csi-driver --cluster <cluster-name> \
+  --service-account-role-arn arn:aws:iam::<AWS_ACCOUNT_ID>:role/AmazonEKS_EBS_CSI_DriverRole --force
+
+1.3. Configure Prometheus on Monitoring VM
+If you prefer to run Prometheus solely on the monitoring VM (instead of in the EKS cluster), configure it to scrape metrics from the EKS cluster and Jenkins.
+
+Edit Prometheus Configuration (prometheus.yml): Modify the Prometheus configuration file (typically located at /etc/prometheus/prometheus.yml on the monitoring VM) to include scrape jobs for the EKS cluster, pods, and Jenkins. Example configuration:
+
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  # Scrape Kubernetes API server
+  - job_name: 'kubernetes-apiservers'
+    kubernetes_sd_configs:
+    - role: endpoints
+      api_server: 'https://<EKS_CLUSTER_ENDPOINT>'
+      tls_config:
+        ca_file: /path/to/ca.crt
+        insecure_skip_verify: true # Use only for testing; provide proper CA cert in production
+      bearer_token_file: /path/to/token
+    scheme: https
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_service_label_component]
+      action: keep
+      regex: apiserver
+
+  # Scrape Kubernetes nodes
+  - job_name: 'kubernetes-nodes'
+    kubernetes_sd_configs:
+    - role: node
+      api_server: 'https://<EKS_CLUSTER_ENDPOINT>'
+      tls_config:
+        ca_file: /path/to/ca.crt
+        insecure_skip_verify: true
+      bearer_token_file: /path/to/token
+    scheme: https
+    relabel_configs:
+    - action: labelmap
+      regex: __meta_kubernetes_node_label_(.+)
+
+  # Scrape Kubernetes pods
+  - job_name: 'kubernetes-pods'
+    kubernetes_sd_configs:
+    - role: pod
+      api_server: 'https://<EKS_CLUSTER_ENDPOINT>'
+      tls_config:
+        ca_file: /path/to/ca.crt
+        insecure_skip_verify: true
+      bearer_token_file: /path/to/token
+    scheme: https
+    relabel_configs:
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+      action: keep
+      regex: true
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+      action: replace
+      target_label: __metrics_path__
+      regex: (.+)
+    - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+      action: replace
+      target_label: __port__
+      regex: (.+)
+
+  # Scrape Jenkins
+  - job_name: 'jenkins'
+    metrics_path: /prometheus
+    static_configs:
+    - targets: ['<JENKINS_VM_IP>:8080'] # Replace with Jenkins VM IP and port
+
+EKS Cluster Endpoint: Get the EKS cluster endpoint using:
+
+aws eks describe-cluster --name <cluster-name> --query cluster.endpoint --output text
+
+CA Certificate and Token: Obtain these from the ~/.kube/config file or create a service account in EKS:
+
+kubectl create sa prometheus -n monitoring
+kubectl create clusterrolebinding prometheus --clusterrole=cluster-admin --serviceaccount=monitoring:prometheus
+SECRET=$(kubectl get sa prometheus -n monitoring -o jsonpath='{.secrets[0].name}')
+kubectl get secret $SECRET -n monitoring -o jsonpath='{.data.ca\.crt}' | base64 -d > /path/to/ca.crt
+kubectl get secret $SECRET -n monitoring -o jsonpath='{.data.token}' | base64 -d > /path/to/token
+Jenkins Metrics Endpoint: Ensure Jenkins exposes metrics (see Step 2 below).
+Restart Prometheus: After updating prometheus.yml, restart Prometheus to apply the changes:
+
+sudo systemctl restart prometheus
+Verify Prometheus Targets: Access the Prometheus UI (default: http://<MONITORING_VM_IP>:9090/targets) to ensure the EKS API server, nodes, pods, and Jenkins are listed as scrape targets.
+Step 2: Enable Metrics in Jenkins
+Jenkins does not expose Prometheus metrics by default. You need to install the Prometheus Metrics Plugin to enable a metrics endpoint.
+
+Install Prometheus Metrics Plugin:
+In Jenkins, go to Manage Jenkins > Manage Plugins > Available.
+Search for Prometheus Metrics Plugin and install it.
+Restart Jenkins if required.
+Access Jenkins Metrics Endpoint:
+The plugin exposes metrics at http://<JENKINS_URL>/prometheus.
+Verify by accessing http://<JENKINS_VM_IP>:8080/prometheus from a browser or curl.
+Secure Jenkins Endpoint (Optional):
+If Jenkins is publicly accessible, secure the /prometheus endpoint with authentication or restrict access to the monitoring VM’s IP using a firewall or Jenkins security settings.
+Step 3: Configure Grafana to Visualize Metrics
+Grafana on the monitoring VM will pull metrics from Prometheus and display them in dashboards.
+
+Access Grafana:
+Open Grafana (default: http://<MONITORING_VM_IP>:3000).
+Log in with default credentials (username: admin, password: admin) and change the password.
+Add Prometheus Data Source:
+Go to Configuration > Data Sources > Add data source.
+Select Prometheus.
+Set the URL to http://localhost:9090 (if Prometheus is on the same VM) or http://<PROMETHEUS_IP>:9090.
+Click Save & Test.
+Import Dashboards:
+For EKS Cluster and Pods:
+Go to Create > Import.
+Use dashboard IDs from Grafana Labs:
+Kubernetes Cluster: ID 315 or 15760 (Node Exporter Full).
+Kubernetes Pods: ID 6417 or 3131.
+Select the Prometheus data source and click Import.
+For Jenkins:
+Import the Jenkins dashboard (ID 9964 or search for “Jenkins Prometheus” on Grafana Labs).
+Configure the dashboard to use the Prometheus data source.
+Customize dashboards as needed to focus on specific metrics (e.g., CPU, memory, Jenkins build times).
+Verify Dashboards:
+Ensure metrics for the EKS cluster (nodes, pods) and Jenkins (builds, queue times) are displayed.
+Example metrics to monitor:
+EKS Cluster: node_cpu_seconds_total, kube_pod_status_phase.
+Pods: container_cpu_usage_seconds_total, container_memory_usage_bytes.
+Jenkins: jenkins_builds_duration_milliseconds, jenkins_jobs_waiting.
