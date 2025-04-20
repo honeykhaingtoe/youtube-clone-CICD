@@ -10,7 +10,6 @@ echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins
 sudo apt-get update -y
 sudo apt-get install jenkins -y
 sudo systemctl start jenkins
-sudo systemctl status jenkins
 
 ##Install Docker and Run SonarQube as Container
 sudo apt-get update
@@ -41,3 +40,10 @@ curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/d
 cd /tmp
 sudo mv /tmp/eksctl /bin
 eksctl version
+
+##install kubectl
+sudo apt update -y
+sudo apt install curl -y
+curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl -y
+kubectl version --client

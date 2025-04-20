@@ -20,7 +20,7 @@ pipeline {
         SONAR_PROJECT_KEY = 'youtube-cicd'
         DOCKER_CREDENTIALS_ID = 'dockerhub'
         SONAR_CREDENTIALS_ID = 'SonarQube-Token'
-        // KUBERNETES_CREDENTIALS_ID = 'kubernetes'
+        KUBERNETES_CREDENTIALS_ID = 'kubernetes'
         SONAR_SERVER = 'SonarQube-Server'
         DOCKER_TOOL_NAME = 'docker'
         TRIVY_FS_REPORT = 'trivyfs.txt'
@@ -148,6 +148,21 @@ pipeline {
         //         }
         //     }
         // }
+
+        stage('Deploy to Kubernets'){
+            steps{
+                script{
+                    dir('Kubernetes') {
+                        kubeconfig(credentialsId: "${KUBERNETES_CREDENTIALS_ID}", serverUrl: '') {
+                        sh 'kubectl delete --all pods'
+                        sh 'kubectl apply -f deployment.yml'
+                        sh 'kubectl apply -f service.yml'
+                        }   
+                    }
+                }
+            }
+        }
+
 
         //     steps {
         //         script {
