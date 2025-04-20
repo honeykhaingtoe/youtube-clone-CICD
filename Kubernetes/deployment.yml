@@ -39,6 +39,6 @@ spec:
     spec:
       containers:
       - name: youtube-clone
-        image: hlaingminpaing/youtube-clone:v1.10  # This will be updated dynamically
+        image: hlaingminpaing/youtube-clone:v1.11  # This will be updated dynamically
         ports:
         - containerPort: 80
