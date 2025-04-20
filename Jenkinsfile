@@ -149,20 +149,33 @@ pipeline {
         //     }
         // }
 
+        // stage('Deploy to Kubernets'){
+        //     steps{
+        //         script{
+        //             dir('Kubernetes') {
+        //                 kubeconfig(credentialsId: "${KUBERNETES_CREDENTIALS_ID}", serverUrl: '') {
+        //                 sh 'kubectl delete --all pods'
+        //                 sh 'kubectl apply -f deployment.yml'
+        //                 sh 'kubectl apply -f service.yml'
+        //                 }   
+        //             }
+        //         }
+        //     }
+        // }
+
         stage('Deploy to Kubernets'){
             steps{
                 script{
                     dir('Kubernetes') {
-                        kubeconfig(credentialsId: "${KUBERNETES_CREDENTIALS_ID}", serverUrl: '') {
-                        sh 'kubectl delete --all pods'
-                        sh 'kubectl apply -f deployment.yml'
-                        sh 'kubectl apply -f service.yml'
-                        }   
+                      withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'kubernetes', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
+                      sh 'kubectl delete --all pods'
+                      sh 'kubectl apply -f deployment.yml'
+                      sh 'kubectl apply -f service.yml'
+                      }   
                     }
                 }
             }
         }
-
 
         //     steps {
         //         script {
