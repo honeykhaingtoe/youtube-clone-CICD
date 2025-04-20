@@ -27,9 +27,9 @@ pipeline {
         TRIVY_IMAGE_REPORT = 'trivyimage.txt'
         K8S_NAMESPACE = 'default'  
         APP_NAME = 'youtube-clone'
-        AWS_ACCESS_KEY_ID = credentials('your-aws-access-key-id-secret')
-        AWS_SECRET_ACCESS_KEY = credentials('your-aws-secret-key-secret')
-        AWS_DEFAULT_REGION = 'ap-southeast-1'
+        // AWS_ACCESS_KEY_ID = credentials('aws-access-key')
+        // AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key')
+        // AWS_DEFAULT_REGION = 'ap-southeast-1'
     }
     
     stages {
@@ -152,33 +152,32 @@ pipeline {
         //     }
         // }
 
-        // stage('Deploy to Kubernets'){
-        //     steps{
-        //         script{
-        //             dir('Kubernetes') {
-        //                 kubeconfig(credentialsId: "${KUBERNETES_CREDENTIALS_ID}", serverUrl: '') {
-        //                 sh 'kubectl delete --all pods'
-        //                 sh 'kubectl apply -f deployment.yml'
-        //                 sh 'kubectl apply -f service.yml'
-        //                 }   
-        //             }
-        //         }
-        //     }
-        // }
-
-        stage('Deploy to Kubernets'){
-            steps{
-                script{
-                    dir('Kubernetes') {
-                      withKubeConfig(caCertificate: '', clusterName: '', contextName: '', credentialsId: 'kubernetes', namespace: '', restrictKubeConfigAccess: false, serverUrl: '') {
-                      sh 'kubectl delete --all pods'
-                      sh 'kubectl apply -f deployment.yml'
-                      sh 'kubectl apply -f service.yml'
-                      }   
+            stage('Deploy to Kubernetes') {
+                steps {
+                    withCredentials([[
+                        $class: 'AmazonWebServicesCredentialsBinding', 
+                        credentialsId: 'aws-secret' // AWS credentials from Jenkins
+                    ]]) {
+                        script {
+                            dir('Kubernetes') {
+                                withKubeConfig(
+                                    credentialsId: "${KUBERNETES_CREDENTIALS_ID}",
+                                    serverUrl: '', // Optional if kubeconfig is valid
+                                    namespace: "${K8S_NAMESPACE}"
+                                ) {
+                                    // Optional: print version to verify AWS credentials are working
+                                    sh 'kubectl version'
+                                    // Update image tag in deployment file (optional)
+                                    sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
+                                    // Deploy
+                                    sh 'kubectl apply -f deployment.yml'
+                                    sh 'kubectl apply -f service.yml'
+                                }
+                            }
+                        }
                     }
                 }
             }
-        }
 
         //     steps {
         //         script {
@@ -206,5 +205,17 @@ pipeline {
         //         }
         //     }
         // }
+    }
+
+    post {
+     always {
+        emailext attachLog: true,
+            subject: "'${currentBuild.result}'",
+            body: "Project: ${env.JOB_NAME}<br/>" +
+                "Build Number: ${env.BUILD_NUMBER}<br/>" +
+                "URL: ${env.BUILD_URL}<br/>",
+            to: 'hlaingminpaing.ygn@gmail.com',                              
+            attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
+        }
     }
 }
