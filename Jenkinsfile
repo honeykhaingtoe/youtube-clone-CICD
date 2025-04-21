@@ -138,33 +138,33 @@ pipeline {
             }
         }
 
-
-            // stage('Deploy to Kubernetes') {
-            //     steps {
-            //         withCredentials([[
-            //             $class: 'AmazonWebServicesCredentialsBinding', 
-            //             credentialsId: 'aws-secret' // AWS credentials from Jenkins
-            //         ]]) {
-            //             script {
-            //                 dir('Kubernetes') {
-            //                     withKubeConfig(
-            //                         credentialsId: "${KUBERNETES_CREDENTIALS_ID}",
-            //                         serverUrl: '', // Optional if kubeconfig is valid
-            //                         namespace: "${K8S_NAMESPACE}"
-            //                     ) {
-            //                         // Optional: print version to verify AWS credentials are working
-            //                         sh 'kubectl version'
-            //                         // Update image tag in deployment file (optional)
-            //                         sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
-            //                         // Deploy
-            //                         sh 'kubectl apply -f deployment.yml'
-            //                         sh 'kubectl apply -f service.yml'
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //     }
-            // }
+        // stage('Deploy to Kubernetes') {
+        //         steps {
+        //             withCredentials([[
+        //                 $class: 'AmazonWebServicesCredentialsBinding', 
+        //                 credentialsId: 'aws-secret' // AWS credentials from Jenkins
+        //             ]]) {
+        //                 script {
+        //                     dir('Kubernetes') {
+        //                         withKubeConfig(
+        //                             credentialsId: "${KUBERNETES_CREDENTIALS_ID}",
+        //                             serverUrl: '', // Optional if kubeconfig is valid
+        //                             namespace: "${K8S_NAMESPACE}"
+        //                         ) {
+        //                             // Optional: print version to verify AWS credentials are working
+        //                             sh 'kubectl version'
+        //                             // Update image tag in deployment file (optional)
+        //                             sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
+        //                             // Deploy
+        //                             sh 'kubectl apply -f deployment.yml'
+        //                             sh 'kubectl apply -f service.yml'
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         }
+            }
+            
 
 
 
