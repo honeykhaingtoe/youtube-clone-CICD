@@ -138,84 +138,45 @@ pipeline {
             }
         }
 
-        // stage('Deploy to Kubernets'){
-        //     steps{
-        //         script{
-        //             dir('Kubernetes') {
-        //                 kubeconfig(credentialsId: 'kubernetes', serverUrl: '') {
-        //                 sh 'kubectl delete --all pods'
-        //                 sh 'kubectl apply -f deployment.yml'
-        //                 sh 'kubectl apply -f service.yml'
-        //                 }   
-        //             }
-        //         }
-        //     }
-        // }
 
-            stage('Deploy to Kubernetes') {
-                steps {
-                    withCredentials([[
-                        $class: 'AmazonWebServicesCredentialsBinding', 
-                        credentialsId: 'aws-secret' // AWS credentials from Jenkins
-                    ]]) {
-                        script {
-                            dir('Kubernetes') {
-                                withKubeConfig(
-                                    credentialsId: "${KUBERNETES_CREDENTIALS_ID}",
-                                    serverUrl: '', // Optional if kubeconfig is valid
-                                    namespace: "${K8S_NAMESPACE}"
-                                ) {
-                                    // Optional: print version to verify AWS credentials are working
-                                    sh 'kubectl version'
-                                    // Update image tag in deployment file (optional)
-                                    sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
-                                    // Deploy
-                                    sh 'kubectl apply -f deployment.yml'
-                                    sh 'kubectl apply -f service.yml'
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            // stage('Deploy to Kubernetes') {
+            //     steps {
+            //         withCredentials([[
+            //             $class: 'AmazonWebServicesCredentialsBinding', 
+            //             credentialsId: 'aws-secret' // AWS credentials from Jenkins
+            //         ]]) {
+            //             script {
+            //                 dir('Kubernetes') {
+            //                     withKubeConfig(
+            //                         credentialsId: "${KUBERNETES_CREDENTIALS_ID}",
+            //                         serverUrl: '', // Optional if kubeconfig is valid
+            //                         namespace: "${K8S_NAMESPACE}"
+            //                     ) {
+            //                         // Optional: print version to verify AWS credentials are working
+            //                         sh 'kubectl version'
+            //                         // Update image tag in deployment file (optional)
+            //                         sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
+            //                         // Deploy
+            //                         sh 'kubectl apply -f deployment.yml'
+            //                         sh 'kubectl apply -f service.yml'
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
 
-        //     steps {
-        //         script {
-        //             dir('Kubernetes') {
-        //                 // Update the image tag in deployment.yml
-        //                 sh "sed -i.bak 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml && rm deployment.yml.bak"
 
-        //                 // Use the default kubeconfig (assumed to be at ~/.kube/config)
-        //                 sh "kubectl apply -f Kubernetes/deployment.yml"
-        //                 sh "kubectl apply -f Kubernetes/service.yml"
-        //                 // sh "kubectl rollout status deployment/${APP_NAME} -n ${K8S_NAMESPACE} --timeout=5m"
-        //             }
-        //         }
-        //     }
-        //     post {
-        //         success {
-        //             echo "Successfully deployed ${APP_NAME} to Kubernetes in namespace ${K8S_NAMESPACE}"
-        //         }
-        //         failure {
-        //             echo "Failed to deploy ${APP_NAME} to Kubernetes in namespace ${K8S_NAMESPACE}"
-        //             dir('Kubernetes') {
-        //                 // Use the default kubeconfig for rollback
-        //                 sh "kubectl rollout undo deployment/${APP_NAME} -n ${K8S_NAMESPACE} || true"
-        //             }
-        //         }
-        //     }
-        // }
-    }
 
-    post {
-     always {
-        emailext attachLog: true,
-            subject: "'${currentBuild.result}'",
-            body: "Project: ${env.JOB_NAME}<br/>" +
-                "Build Number: ${env.BUILD_NUMBER}<br/>" +
-                "URL: ${env.BUILD_URL}<br/>",
-            to: 'hlaingminpaing.ygn@gmail.com',                              
-            attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
-        }
-    }
+    // post {
+    //  always {
+    //     emailext attachLog: true,
+    //         subject: "'${currentBuild.result}'",
+    //         body: "Project: ${env.JOB_NAME}<br/>" +
+    //             "Build Number: ${env.BUILD_NUMBER}<br/>" +
+    //             "URL: ${env.BUILD_URL}<br/>",
+    //         to: 'hlaingminpaing.ygn@gmail.com',                              
+    //         attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
+    //     }
+    // }
 }

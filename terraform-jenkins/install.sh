@@ -10,6 +10,7 @@ echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] https://pkg.jenkins
 sudo apt-get update -y
 sudo apt-get install jenkins -y
 sudo systemctl start jenkins
+sudo systemctl enable jenkins
 
 ##Install Docker and Run SonarQube as Container
 sudo apt-get update
