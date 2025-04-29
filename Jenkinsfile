@@ -13,9 +13,9 @@ pipeline {
     environment {
         SCANNER_HOME = tool 'sonarqube-scanner'
         TRIVY_HOME = '/usr/bin'
-        REPO_URL = 'https://github.com/hlaingminpaing/youtube-clone-CICD.git' 
+        REPO_URL = 'https://github.com/honeykhaingtoe/youtube-clone-CICD.git' 
         REPO_BRANCH = 'main'
-        DOCKER_IMAGE_NAME = 'hlaingminpaing/youtube-clone'
+        DOCKER_IMAGE_NAME = 'honeykhaingtoe/youtube-clone'
         SONAR_PROJECT_NAME = 'youtube-cicd'
         SONAR_PROJECT_KEY = 'youtube-cicd'
         DOCKER_CREDENTIALS_ID = 'dockerhub'
@@ -59,13 +59,13 @@ pipeline {
                 }
             }
         }
-        stage('Quality Gate') {
-            steps {
-                script {
-                    waitForQualityGate abortPipeline: false, credentialsId: "${SONAR_CREDENTIALS_ID}"
-                }
-            }
-        }
+        //stage('Quality Gate') {
+            //steps {
+              //  script {
+                //    waitForQualityGate abortPipeline: false, credentialsId: "${SONAR_CREDENTIALS_ID}"
+               // }
+          //  }
+      //  }
         
         stage('Install Dependencies') {
             steps {
@@ -111,16 +111,16 @@ pipeline {
                         // Build the Docker image
                         sh "docker build -t youtube-clone ."
                         // Tag the image with the dynamically fetched version
-                        sh "docker tag youtube-clone hlaingminpaing/youtube-clone:${env.IMAGE_TAG}"
+                        sh "docker tag youtube-clone honeykhaingtoe/youtube-clone:${env.IMAGE_TAG}"
                         // Push the tagged image
-                        sh "docker push hlaingminpaing/youtube-clone:${env.IMAGE_TAG}"
+                        sh "docker push honeykhaingtoe/youtube-clone:${env.IMAGE_TAG}"
                     }
                 }
             }
             post {
                 always {
                     // Clean up Docker images to save disk space
-                    sh "docker rmi youtube-clone hlaingminpaing/youtube-clone:${env.IMAGE_TAG} || true"
+                    sh "docker rmi youtube-clone honeykhaingtoe/youtube-clone:${env.IMAGE_TAG} || true"
                 }
             }
         }
@@ -138,32 +138,32 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
-                steps {
-                    withCredentials([[
-                        $class: 'AmazonWebServicesCredentialsBinding', 
-                        credentialsId: 'aws-secret' // AWS credentials from Jenkins
-                    ]]) {
-                        script {
-                            dir('Kubernetes') {
-                                withKubeConfig(
-                                    credentialsId: "${KUBERNETES_CREDENTIALS_ID}",
-                                    serverUrl: '', // Optional if kubeconfig is valid
-                                    namespace: "${K8S_NAMESPACE}"
-                                ) {
+        //stage('Deploy to Kubernetes') {
+          //      steps {
+            //        withCredentials([[
+              //          $class: 'AmazonWebServicesCredentialsBinding', 
+                //        credentialsId: 'aws-secret' // AWS credentials from Jenkins
+                  //  ]]) {
+                    //    script {
+                      //      dir('Kubernetes') {
+                        //        withKubeConfig(
+                          //          credentialsId: "${KUBERNETES_CREDENTIALS_ID}",
+                            //        serverUrl: '', // Optional if kubeconfig is valid
+                              //      namespace: "${K8S_NAMESPACE}"
+                               // ) {
                                     // Optional: print version to verify AWS credentials are working
-                                    sh 'kubectl version'
+                                 //   sh 'kubectl version'
                                     // Update image tag in deployment file (optional)
-                                    sh "sed -i 's|image: hlaingminpaing/youtube-clone:.*|image: hlaingminpaing/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
+                                   // sh "sed -i 's|image: honeykhaingtoe/youtube-clone:.*|image: honeykhaingtoe/youtube-clone:${env.IMAGE_TAG}|' deployment.yml"
                                     // Deploy
-                                    sh 'kubectl apply -f deployment.yml'
-                                    sh 'kubectl apply -f service.yml'
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                                   // sh 'kubectl apply -f deployment.yml'
+                                   // sh 'kubectl apply -f service.yml'
+                             //   }
+                          //  }
+                     //   }
+                   // }
+              //  }
+          //  }
         }   
 
 
@@ -175,7 +175,7 @@ pipeline {
             body: "Project: ${env.JOB_NAME}<br/>" +
                 "Build Number: ${env.BUILD_NUMBER}<br/>" +
                 "URL: ${env.BUILD_URL}<br/>",
-            to: 'hlaingminpaing.ygn@gmail.com',                              
+            to: 'honeykhaing.toe@kbzbank.com',                              
             attachmentsPattern: 'trivyfs.txt,trivyimage.txt'
         }
     }
